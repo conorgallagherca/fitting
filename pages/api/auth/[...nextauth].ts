@@ -5,6 +5,22 @@ import GoogleProvider from 'next-auth/providers/google'
 // import { prisma } from '@/lib/prisma'
 import { compare } from 'bcryptjs'
 
+// Mock users storage (in production, this would be in a database)
+let mockUsers = [
+  {
+    id: '1',
+    email: 'user@example.com',
+    password: '$2a$12$LQv3c1yqBWVHxkd0LHAkCOYz6TtxMQJqhN8/LeVMpYxNPq4wGoZTW', // secret123
+    name: 'Test User',
+    image: null
+  }
+]
+
+// Function to add new user to mock storage
+export const addMockUser = (user: any) => {
+  mockUsers.push(user)
+}
+
 export const authOptions: NextAuthOptions = {
   // adapter: PrismaAdapter(prisma),
   providers: [
@@ -41,16 +57,6 @@ export const authOptions: NextAuthOptions = {
         */
 
         // Mock authentication for development
-        const mockUsers = [
-          {
-            id: '1',
-            email: 'user@example.com',
-            password: '$2a$12$LQv3c1yqBWVHxkd0LHAkCOYz6TtxMQJqhN8/LeVMpYxNPq4wGoZTW', // secret123
-            name: 'Test User',
-            image: null
-          }
-        ]
-
         const mockUser = mockUsers.find(u => u.email === credentials.email)
         if (!mockUser) {
           return null

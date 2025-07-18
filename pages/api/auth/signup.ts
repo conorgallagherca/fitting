@@ -1,5 +1,6 @@
 import { NextApiRequest, NextApiResponse } from 'next'
 import { hash } from 'bcryptjs'
+import { addMockUser } from './[...nextauth]'
 // import bcrypt from 'bcryptjs'
 // import { prisma } from '@/lib/prisma'
 
@@ -56,9 +57,13 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     const mockUser = {
       id: 'mock-' + Date.now(),
       email,
+      password: hashedPassword, // Store hashed password for authentication
       name: name || null,
       image: null
     }
+
+    // Add user to NextAuth mock users list for immediate authentication
+    addMockUser(mockUser)
 
     return res.status(201).json({
       message: 'User created successfully',
