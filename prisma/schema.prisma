@@ -1,0 +1,233 @@
+// This is your Prisma schema file for FitLingo - a Duolingo-like gym workout app
+// It defines the database schema and models for user management, workout tracking, and gamification
+// 
+// Schema Design Philosophy:
+// - JSON fields for flexibility in storing workout routines and user feedback
+// - Optimized for AI analysis and recommendation systems
+// - Supports rapid iteration and feature development
+// - Balances structure with adaptability for evolving fitness data
+// 
+// Learn more about Prisma: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// User model - Core entity for authentication and comprehensive fitness profile management
+// This model stores both authentication data and rich fitness preferences for AI personalization
+// 
+// Key Design Decisions:
+// - JSON fields for goals and preferences allow flexible, evolving data structures
+// - Streak tracking for gamification (Duolingo-style motivation)
+// - Equipment and fitness level for workout customization
+// - Extensible for future features like social connections and achievements
+// 
+// AI Integration Points:
+// - goals JSON: Analyzed for workout focus areas and exercise selection
+// - preferences JSON: User habits, workout times, intensity preferences, injury history
+// - streak: Motivational factor in workout generation and difficulty progression
+// - Historical workout data (via relation) for pattern analysis and improvement suggestions
+model User {
+  id            String    @id @default(cuid())
+  email         String    @unique
+  name          String?
+  image         String?   // Profile picture URL from OAuth providers
+  emailVerified DateTime? // Email verification timestamp for NextAuth
+  password      String?   // Hashed password for email/password auth (nullable for OAuth users)
+  
+  // Enhanced fitness profile fields for AI-powered personalization
+  fitnessLevel  String?   // 'beginner', 'intermediate', 'advanced' - determines base difficulty
+  
+  // JSON fields for flexible, evolving data structures
+  // goals: Array of fitness objectives for AI workout focus
+  // Example: ["weight_loss", "muscle_gain", "endurance", "strength", "flexibility"]
+  goals         Json?     @default("[]") // Flexible array of fitness goals
+  
+  // preferences: Rich user preferences for workout customization
+  // Example: { 
+  //   "workoutDuration": 30, 
+  //   "workoutTime": "morning", 
+  //   "intensity": "moderate",
+  //   "restDays": ["sunday"],
+  //   "injuries": ["knee"],
+  //   "musicPreference": "upbeat"
+  // }
+  preferences   Json?     @default("{}") // User workout preferences and constraints
+  
+  // equipment: Available equipment for realistic workout generation
+  // Example: ["bodyweight", "dumbbells", "resistance_bands", "yoga_mat"]
+  equipment     Json?     @default("[]") // Available workout equipment
+  
+  // Gamification fields for motivation and engagement (Duolingo-style)
+  streak        Int       @default(0)    // Current daily workout streak
+  longestStreak Int       @default(0)    // Personal best streak for motivation
+  totalWorkouts Int       @default(0)    // Total completed workouts for progress tracking
+  level         Int       @default(1)    // User fitness level for gamification
+  xp            Int       @default(0)    // Experience points for achievements
+  
+  // Timestamps for tracking user lifecycle and activity patterns
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  lastActiveAt  DateTime? // For streak calculation and user engagement analysis
+  
+  // NextAuth relations for authentication system
+  accounts      Account[]
+  sessions      Session[]
+  
+  // Fitness tracking relations
+  workouts      Workout[] // User's complete workout history for AI analysis
+  
+  @@map("users")
+}
+
+// Workout model - Individual workout sessions with rich data for AI analysis
+// This model captures complete workout sessions including routines, performance, and feedback
+// 
+// Design Rationale:
+// - JSON routine field allows flexible exercise structures without rigid schema constraints
+// - Feedback JSON captures user experience for AI learning and improvement
+// - Completion tracking for streak calculation and progress analytics
+// - Date indexing for efficient time-based queries and trend analysis
+// 
+// AI Analysis Capabilities:
+// - routine JSON: Exercise patterns, progression tracking, difficulty analysis
+// - feedback JSON: User satisfaction, difficulty perception, injury reports
+// - Completion patterns: Adherence trends, optimal workout timing
+// - Performance metrics: Volume progression, strength gains, endurance improvements
+model Workout {
+  id          String   @id @default(cuid())
+  
+  // User relationship for data ownership and privacy
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  // Temporal data for trend analysis and scheduling optimization
+  date        DateTime @default(now()) // When workout was scheduled/completed
+  completedAt DateTime? // Actual completion timestamp for duration tracking
+  
+  // Core workout data stored as flexible JSON for AI analysis
+  routine     Json     // Flexible workout routine structure for AI generation
+  
+  // Performance and completion tracking
+  completed   Boolean  @default(false) // Completion status for streak calculation
+  duration    Int?     // Actual workout duration in minutes
+  
+  // User experience data for AI learning and personalization
+  feedback    Json?    @default("{}") // User feedback for AI learning
+  
+  // Metadata for workout categorization and analysis
+  workoutType String?  // "strength", "cardio", "flexibility", "mixed"
+  tags        Json?    @default("[]") // Flexible tagging system ["upper_body", "beginner_friendly"]
+  
+  // AI generation metadata
+  generatedBy String?  // "ai", "template", "custom" - for analysis of generation effectiveness
+  templateId  String?  // Reference to template if workout was based on one
+  
+  // Performance metrics for progress tracking
+  metrics     Json?    @default("{}") // Performance metrics and analytics
+  
+  // Timestamps for comprehensive data analysis
+  createdAt   DateTime @default(now()) // When workout was created/generated
+  updatedAt   DateTime @updatedAt      // Last modification timestamp
+  
+  // Database optimization indexes for efficient queries
+  @@index([userId, date]) // Efficient user workout history queries
+  @@index([date]) // Global workout trend analysis
+  @@index([completed, userId]) // Streak and completion rate calculations
+  @@index([workoutType]) // Workout type analysis and recommendations
+  
+  @@map("workouts")
+}
+
+// Workout Template model - Predefined workout structures for consistent AI generation
+// Templates provide starting points for AI customization and ensure workout quality
+// 
+// Purpose:
+// - Seed AI with proven workout structures
+// - Provide fallback when AI generation needs baseline
+// - Enable rapid workout creation for new users
+// - Maintain workout quality standards
+model WorkoutTemplate {
+  id          String   @id @default(cuid())
+  name        String   // "Beginner Upper Body", "HIIT Cardio Blast"
+  description String?  // Detailed template description
+  
+  // Template categorization for appropriate selection
+  category    String   // "strength", "cardio", "flexibility", "mixed"
+  difficulty  String   // "beginner", "intermediate", "advanced"
+  duration    Int      // Estimated duration in minutes
+  equipment   Json     @default("[]") // Required equipment array
+  
+  // Template routine structure (same format as Workout.routine)
+  routine     Json     // Base routine structure for customization
+  
+  // Template metadata for AI selection
+  tags        Json     @default("[]") // Template characteristics
+  targetGoals Json     @default("[]") // Fitness goals this template supports
+  
+  // Usage tracking for template effectiveness analysis
+  usageCount  Int      @default(0)    // How often this template is used
+  rating      Float?   // Average user rating for template quality
+  
+  // Template management
+  isActive    Boolean  @default(true) // Whether template is available for use
+  createdBy   String?  // "system", "trainer", "community"
+  
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  @@index([category, difficulty]) // Efficient template selection queries
+  @@index([isActive]) // Active template filtering
+  
+  @@map("workout_templates")
+}
+
+// NextAuth Account model - Handles OAuth provider accounts
+// Stores connection data for Google, GitHub, etc.
+model Account {
+  id                String  @id @default(cuid())
+  userId            String  @map("user_id")
+  type              String
+  provider          String
+  providerAccountId String  @map("provider_account_id")
+  refresh_token     String? @db.Text
+  access_token      String? @db.Text
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String? @db.Text
+  session_state     String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+  @@map("accounts")
+}
+
+// NextAuth Session model - Manages active user sessions
+// Critical for maintaining login state and security
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique @map("session_token")
+  userId       String   @map("user_id")
+  expires      DateTime
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("sessions")
+}
+
+// NextAuth Verification Token model - Handles email verification
+// Used for magic links and email confirmation flow
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
+  @@map("verificationtokens")
+} 
