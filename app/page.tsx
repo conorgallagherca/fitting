@@ -15,25 +15,49 @@ export default function Home() {
       icon: "🤖",
       title: "AI-Powered Workouts",
       description: "Get personalized workouts created by advanced AI that adapts to your fitness level, goals, and available equipment.",
-      color: "from-blue-500 to-cyan-500"
+      color: "bg-blue-500"
     },
     {
       icon: "🎮",
       title: "Gamified Experience",
       description: "Earn XP, maintain streaks, and unlock achievements. Stay motivated with Duolingo-style progression and rewards.",
-      color: "from-purple-500 to-pink-500"
+      color: "bg-purple-500"
     },
     {
       icon: "📊",
       title: "Smart Analytics",
       description: "Track your progress with detailed analytics, performance metrics, and insights that help you optimize your fitness journey.",
-      color: "from-green-500 to-emerald-500"
+      color: "bg-green-500"
     },
     {
       icon: "🎯",
       title: "Personal Goals",
       description: "Set and achieve your fitness goals with AI-guided recommendations and adaptive workout plans.",
-      color: "from-orange-500 to-red-500"
+      color: "bg-orange-500"
+    }
+  ]
+
+  const testimonials = [
+    {
+      name: "Sarah Chen",
+      role: "Fitness Enthusiast",
+      avatar: "👩‍💼",
+      content: "FitLingo completely transformed my fitness routine. The AI coach understands exactly what I need and keeps me motivated with fun challenges!",
+      rating: 5
+    },
+    {
+      name: "Marcus Rodriguez",
+      role: "Busy Professional",
+      avatar: "👨‍💻",
+      content: "As someone with a hectic schedule, FitLingo's quick, effective workouts are perfect. The progress tracking keeps me accountable.",
+      rating: 5
+    },
+    {
+      name: "Emma Thompson",
+      role: "Yoga Instructor",
+      avatar: "🧘‍♀️",
+      content: "I love how FitLingo adapts to my fitness level and available equipment. The gamification makes working out actually fun!",
+      rating: 5
     }
   ]
 
@@ -52,21 +76,21 @@ export default function Home() {
   }, [features.length])
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 overflow-hidden">
+    <div className="min-h-screen bg-slate-50 dark:bg-slate-900 overflow-hidden">
       {/* Animated background particles */}
       {windowSize.width > 0 && (
         <div className="fixed inset-0 overflow-hidden pointer-events-none">
-          {[...Array(50)].map((_, i) => (
+          {[...Array(30)].map((_, i) => (
             <motion.div
               key={i}
-              className="absolute w-1 h-1 bg-white rounded-full opacity-20"
+              className="absolute w-1 h-1 bg-blue-400 dark:bg-blue-300 rounded-full opacity-30"
               animate={{
                 x: [0, Math.random() * windowSize.width],
                 y: [0, Math.random() * windowSize.height],
-                opacity: [0.2, 0.8, 0.2],
+                opacity: [0.3, 0.6, 0.3],
               }}
               transition={{
-                duration: Math.random() * 10 + 10,
+                duration: Math.random() * 15 + 15,
                 repeat: Infinity,
                 ease: "linear",
               }}
@@ -96,7 +120,7 @@ export default function Home() {
                 transition={{ duration: 0.8, delay: 0.4 }}
                 className="mb-6"
               >
-                <span className="inline-block px-4 py-2 rounded-full bg-gradient-to-r from-green-500/20 to-blue-500/20 border border-green-500/30 text-green-400 text-sm font-medium mb-4">
+                <span className="inline-block px-4 py-2 rounded-full bg-blue-100 dark:bg-blue-900/30 border border-blue-200 dark:border-blue-700 text-blue-700 dark:text-blue-300 text-sm font-medium mb-4">
                   🚀 AI-Powered Fitness Revolution
                 </span>
               </motion.div>
@@ -107,11 +131,11 @@ export default function Home() {
                 transition={{ duration: 0.8, delay: 0.6 }}
                 className="text-5xl lg:text-7xl font-bold mb-6 leading-tight"
               >
-                <span className="bg-gradient-to-r from-green-400 via-blue-500 to-purple-600 bg-clip-text text-transparent">
+                <span className="text-slate-800 dark:text-white">
                   Meet Your
                 </span>
                 <br />
-                <span className="bg-gradient-to-r from-cyan-400 via-blue-500 to-purple-600 bg-clip-text text-transparent">
+                <span className="text-blue-600 dark:text-blue-400">
                   AI Fitness Coach
                 </span>
               </motion.h1>
@@ -120,7 +144,7 @@ export default function Home() {
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: isVisible ? 1 : 0, y: isVisible ? 0 : 20 }}
                 transition={{ duration: 0.8, delay: 0.8 }}
-                className="text-xl lg:text-2xl text-gray-300 mb-8 leading-relaxed max-w-2xl mx-auto lg:mx-0"
+                className="text-xl lg:text-2xl text-slate-600 dark:text-slate-300 mb-8 leading-relaxed max-w-2xl mx-auto lg:mx-0"
               >
                 Transform your fitness journey with a personal AI assistant that creates 
                 custom workouts, tracks your progress, and keeps you motivated with 
@@ -137,7 +161,7 @@ export default function Home() {
                   <motion.button
                     whileHover={{ scale: 1.05 }}
                     whileTap={{ scale: 0.95 }}
-                    className="px-8 py-4 rounded-xl bg-gradient-to-r from-green-500 to-blue-600 text-white text-lg font-semibold shadow-2xl shadow-green-500/25 hover:shadow-green-500/40 transition-all duration-300"
+                    className="px-8 py-4 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-lg font-semibold shadow-lg transition-all duration-300"
                   >
                     🚀 Get Started Free
                   </motion.button>
@@ -147,7 +171,7 @@ export default function Home() {
                   <motion.button
                     whileHover={{ scale: 1.05 }}
                     whileTap={{ scale: 0.95 }}
-                    className="px-8 py-4 rounded-xl border-2 border-green-500/50 text-green-400 text-lg font-semibold hover:bg-green-500/10 transition-all duration-300 backdrop-blur-sm"
+                    className="px-8 py-4 rounded-xl border-2 border-blue-600 text-blue-600 dark:text-blue-400 text-lg font-semibold hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-all duration-300"
                   >
                     🔐 Sign In
                   </motion.button>
@@ -162,16 +186,16 @@ export default function Home() {
                 className="flex justify-center lg:justify-start gap-8 mt-12"
               >
                 <div className="text-center">
-                  <div className="text-2xl font-bold text-white">10K+</div>
-                  <div className="text-gray-400 text-sm">Active Users</div>
+                  <div className="text-2xl font-bold text-slate-800 dark:text-white">10K+</div>
+                  <div className="text-slate-600 dark:text-slate-400 text-sm">Active Users</div>
                 </div>
                 <div className="text-center">
-                  <div className="text-2xl font-bold text-white">500+</div>
-                  <div className="text-gray-400 text-sm">Workouts</div>
+                  <div className="text-2xl font-bold text-slate-800 dark:text-white">500+</div>
+                  <div className="text-slate-600 dark:text-slate-400 text-sm">Workouts</div>
                 </div>
                 <div className="text-center">
-                  <div className="text-2xl font-bold text-white">95%</div>
-                  <div className="text-gray-400 text-sm">Success Rate</div>
+                  <div className="text-2xl font-bold text-slate-800 dark:text-white">95%</div>
+                  <div className="text-slate-600 dark:text-slate-400 text-sm">Success Rate</div>
                 </div>
               </motion.div>
             </motion.div>
@@ -191,12 +215,12 @@ export default function Home() {
               <motion.div
                 animate={{ y: [0, -10, 0] }}
                 transition={{ duration: 3, repeat: Infinity, ease: "easeInOut" }}
-                className="absolute top-10 left-10 w-16 h-16 bg-gradient-to-r from-green-500/20 to-blue-500/20 rounded-full backdrop-blur-sm border border-green-500/30"
+                className="absolute top-10 left-10 w-16 h-16 bg-blue-100 dark:bg-blue-900/30 rounded-full backdrop-blur-sm border border-blue-200 dark:border-blue-700"
               />
               <motion.div
                 animate={{ y: [0, 10, 0] }}
                 transition={{ duration: 4, repeat: Infinity, ease: "easeInOut", delay: 1 }}
-                className="absolute bottom-20 right-10 w-12 h-12 bg-gradient-to-r from-purple-500/20 to-pink-500/20 rounded-full backdrop-blur-sm border border-purple-500/30"
+                className="absolute bottom-20 right-10 w-12 h-12 bg-purple-100 dark:bg-purple-900/30 rounded-full backdrop-blur-sm border border-purple-200 dark:border-purple-700"
               />
             </motion.div>
           </div>
@@ -213,10 +237,10 @@ export default function Home() {
             viewport={{ once: true }}
             className="text-center mb-16"
           >
-            <h2 className="text-4xl lg:text-5xl font-bold mb-6 bg-gradient-to-r from-green-400 to-blue-500 bg-clip-text text-transparent">
+            <h2 className="text-4xl lg:text-5xl font-bold mb-6 text-slate-800 dark:text-white">
               Why Choose FitLingo?
             </h2>
-            <p className="text-xl text-gray-300 max-w-3xl mx-auto">
+            <p className="text-xl text-slate-600 dark:text-slate-300 max-w-3xl mx-auto">
               Experience the future of fitness with AI-powered personalization and gamified motivation
             </p>
           </motion.div>
@@ -232,14 +256,67 @@ export default function Home() {
                 whileHover={{ y: -10 }}
                 className="relative group"
               >
-                <div className={`p-8 rounded-2xl bg-gradient-to-br ${feature.color} bg-opacity-10 border border-white/10 backdrop-blur-sm hover:bg-opacity-20 transition-all duration-300`}>
-                  <div className="text-4xl mb-4">{feature.icon}</div>
-                  <h3 className="text-xl font-semibold mb-3 text-white">{feature.title}</h3>
-                  <p className="text-gray-300 leading-relaxed">{feature.description}</p>
+                <div className="p-8 rounded-2xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 shadow-lg hover:shadow-xl transition-all duration-300">
+                  <div className={`w-16 h-16 rounded-xl ${feature.color} flex items-center justify-center text-2xl mb-4`}>
+                    {feature.icon}
+                  </div>
+                  <h3 className="text-xl font-semibold mb-3 text-slate-800 dark:text-white">{feature.title}</h3>
+                  <p className="text-slate-600 dark:text-slate-300 leading-relaxed">{feature.description}</p>
+                </div>
+              </motion.div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* Testimonials Section */}
+      <section className="py-20 px-4 bg-white dark:bg-slate-800">
+        <div className="container mx-auto">
+          <motion.div
+            initial={{ opacity: 0, y: 30 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.8 }}
+            viewport={{ once: true }}
+            className="text-center mb-16"
+          >
+            <h2 className="text-4xl lg:text-5xl font-bold mb-6 text-slate-800 dark:text-white">
+              What Our Users Say
+            </h2>
+            <p className="text-xl text-slate-600 dark:text-slate-300 max-w-3xl mx-auto">
+              Join thousands of satisfied users who have transformed their fitness journey
+            </p>
+          </motion.div>
+
+          <div className="grid md:grid-cols-3 gap-8">
+            {testimonials.map((testimonial, index) => (
+              <motion.div
+                key={index}
+                initial={{ opacity: 0, y: 30 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.6, delay: index * 0.2 }}
+                viewport={{ once: true }}
+                className="bg-slate-50 dark:bg-slate-700 p-8 rounded-2xl border border-slate-200 dark:border-slate-600"
+              >
+                {/* Rating */}
+                <div className="flex mb-4">
+                  {[...Array(testimonial.rating)].map((_, i) => (
+                    <span key={i} className="text-yellow-400 text-xl">⭐</span>
+                  ))}
                 </div>
                 
-                {/* Glow effect */}
-                <div className={`absolute inset-0 rounded-2xl bg-gradient-to-br ${feature.color} opacity-0 group-hover:opacity-20 blur-xl transition-opacity duration-300 -z-10`} />
+                {/* Content */}
+                <p className="text-slate-700 dark:text-slate-300 mb-6 leading-relaxed italic">
+                  "{testimonial.content}"
+                </p>
+                
+                {/* Author */}
+                <div className="flex items-center">
+                  <div className="text-3xl mr-4">{testimonial.avatar}</div>
+                  <div>
+                    <div className="font-semibold text-slate-800 dark:text-white">{testimonial.name}</div>
+                    <div className="text-sm text-slate-600 dark:text-slate-400">{testimonial.role}</div>
+                  </div>
+                </div>
               </motion.div>
             ))}
           </div>
@@ -256,10 +333,10 @@ export default function Home() {
             viewport={{ once: true }}
             className="max-w-4xl mx-auto"
           >
-            <h2 className="text-4xl lg:text-5xl font-bold mb-6 bg-gradient-to-r from-green-400 to-blue-500 bg-clip-text text-transparent">
+            <h2 className="text-4xl lg:text-5xl font-bold mb-6 text-slate-800 dark:text-white">
               Ready to Transform Your Fitness?
             </h2>
-            <p className="text-xl text-gray-300 mb-8 max-w-2xl mx-auto">
+            <p className="text-xl text-slate-600 dark:text-slate-300 mb-8 max-w-2xl mx-auto">
               Join thousands of users who are already achieving their fitness goals with their personal AI coach.
             </p>
             
@@ -268,7 +345,7 @@ export default function Home() {
               whileTap={{ scale: 0.95 }}
             >
               <Link href="/auth/signup">
-                <button className="px-12 py-6 rounded-2xl bg-gradient-to-r from-green-500 to-blue-600 text-white text-xl font-bold shadow-2xl shadow-green-500/25 hover:shadow-green-500/40 transition-all duration-300">
+                <button className="px-12 py-6 rounded-2xl bg-blue-600 hover:bg-blue-700 text-white text-xl font-bold shadow-lg transition-all duration-300">
                   🚀 Start Your Free Journey
                 </button>
               </Link>

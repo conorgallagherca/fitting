@@ -37,7 +37,7 @@ function FloatingParticles({ count = 100 }) {
   return (
     <instancedMesh ref={mesh} args={[undefined, undefined, count]}>
       <sphereGeometry args={[0.02, 8, 8]} />
-      <meshBasicMaterial color="#22c55e" transparent opacity={0.6} />
+      <meshBasicMaterial color="#3b82f6" transparent opacity={0.4} />
     </instancedMesh>
   )
 }
@@ -64,55 +64,55 @@ function AIAssistant({ isAnimating }: { isAnimating: boolean }) {
     <group ref={groupRef} onPointerOver={() => setHovered(true)} onPointerOut={() => setHovered(false)}>
       {/* Head */}
       <Sphere args={[0.8, 32, 32]} position={[0, 1.5, 0]}>
-        <meshStandardMaterial color="#3b82f6" metalness={0.8} roughness={0.2} />
+        <meshStandardMaterial color="#3b82f6" metalness={0.6} roughness={0.3} />
       </Sphere>
       
       {/* Eyes */}
       <Sphere args={[0.1, 16, 16]} position={[-0.3, 1.6, 0.6]}>
-        <meshStandardMaterial color="#ffffff" emissive="#ffffff" emissiveIntensity={0.5} />
+        <meshStandardMaterial color="#ffffff" emissive="#ffffff" emissiveIntensity={0.3} />
       </Sphere>
       <Sphere args={[0.1, 16, 16]} position={[0.3, 1.6, 0.6]}>
-        <meshStandardMaterial color="#ffffff" emissive="#ffffff" emissiveIntensity={0.5} />
+        <meshStandardMaterial color="#ffffff" emissive="#ffffff" emissiveIntensity={0.3} />
       </Sphere>
       
       {/* Pupils */}
       <Sphere args={[0.05, 16, 16]} position={[-0.3, 1.6, 0.7]}>
-        <meshStandardMaterial color="#000000" />
+        <meshStandardMaterial color="#1e293b" />
       </Sphere>
       <Sphere args={[0.05, 16, 16]} position={[0.3, 1.6, 0.7]}>
-        <meshStandardMaterial color="#000000" />
+        <meshStandardMaterial color="#1e293b" />
       </Sphere>
       
       {/* Body */}
       <Cylinder args={[0.6, 0.8, 1.5, 32]} position={[0, 0, 0]}>
-        <meshStandardMaterial color="#1e40af" metalness={0.6} roughness={0.3} />
+        <meshStandardMaterial color="#1e40af" metalness={0.4} roughness={0.4} />
       </Cylinder>
       
       {/* Arms */}
       <Cylinder args={[0.15, 0.15, 1.2, 16]} position={[-1, 0.5, 0]} rotation={[0, 0, Math.PI / 4]}>
-        <meshStandardMaterial color="#3b82f6" metalness={0.7} roughness={0.2} />
+        <meshStandardMaterial color="#3b82f6" metalness={0.5} roughness={0.3} />
       </Cylinder>
       <Cylinder args={[0.15, 0.15, 1.2, 16]} position={[1, 0.5, 0]} rotation={[0, 0, -Math.PI / 4]}>
-        <meshStandardMaterial color="#3b82f6" metalness={0.7} roughness={0.2} />
+        <meshStandardMaterial color="#3b82f6" metalness={0.5} roughness={0.3} />
       </Cylinder>
       
       {/* Hands */}
       <Sphere args={[0.2, 16, 16]} position={[-1.4, 0.2, 0.4]}>
-        <meshStandardMaterial color="#fbbf24" metalness={0.3} roughness={0.7} />
+        <meshStandardMaterial color="#f59e0b" metalness={0.2} roughness={0.8} />
       </Sphere>
       <Sphere args={[0.2, 16, 16]} position={[1.4, 0.2, 0.4]}>
-        <meshStandardMaterial color="#fbbf24" metalness={0.3} roughness={0.7} />
+        <meshStandardMaterial color="#f59e0b" metalness={0.2} roughness={0.8} />
       </Sphere>
       
       {/* Energy field */}
       <Sphere args={[2, 32, 32]} position={[0, 0, 0]}>
         <meshStandardMaterial 
-          color="#22c55e" 
+          color="#3b82f6" 
           transparent 
-          opacity={0.1} 
+          opacity={0.08} 
           wireframe 
-          emissive="#22c55e"
-          emissiveIntensity={0.2}
+          emissive="#3b82f6"
+          emissiveIntensity={0.1}
         />
       </Sphere>
     </group>
@@ -134,7 +134,7 @@ function SpeechBubble({ text, position }: { text: string; position: [number, num
       <Text
         position={[0, 0, 0.11]}
         fontSize={0.2}
-        color="#1f2937"
+        color="#1e293b"
         anchorX="center"
         anchorY="middle"
         maxWidth={2.8}
@@ -156,9 +156,9 @@ function Scene({ isAnimating }: { isAnimating: boolean }) {
   return (
     <>
       {/* Lighting */}
-      <ambientLight intensity={0.4} />
-      <directionalLight position={[10, 10, 5]} intensity={1} castShadow />
-      <pointLight position={[-10, -10, -10]} intensity={0.5} color="#22c55e" />
+      <ambientLight intensity={0.5} />
+      <directionalLight position={[10, 10, 5]} intensity={0.8} castShadow />
+      <pointLight position={[-10, -10, -10]} intensity={0.3} color="#3b82f6" />
       
       {/* AI Assistant */}
       <AIAssistant isAnimating={isAnimating} />
@@ -168,12 +168,12 @@ function Scene({ isAnimating }: { isAnimating: boolean }) {
       <SpeechBubble text="Let's get started together!" position={[-3, 1.5, 0]} />
       
       {/* Floating particles */}
-      <FloatingParticles count={150} />
+      <FloatingParticles count={100} />
       
       {/* Ground plane */}
       <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -2, 0]} receiveShadow>
         <planeGeometry args={[20, 20]} />
-        <meshStandardMaterial color="#f8fafc" transparent opacity={0.3} />
+        <meshStandardMaterial color="#f8fafc" transparent opacity={0.2} />
       </mesh>
     </>
   )
@@ -210,7 +210,7 @@ export default function AIAssistant3D() {
       </Canvas>
       
       {/* Overlay gradient */}
-      <div className="absolute inset-0 bg-gradient-to-t from-background/20 to-transparent pointer-events-none" />
+      <div className="absolute inset-0 bg-gradient-to-t from-slate-50/20 dark:from-slate-900/20 to-transparent pointer-events-none" />
     </div>
   )
 } 
