@@ -4,6 +4,10 @@ import { useState, useEffect } from 'react'
 import { exercises, exerciseCategories, filterExercises, Exercise } from '@/lib/exercises'
 import { useSession } from 'next-auth/react'
 import { useRouter } from 'next/navigation'
+import { useProgressStore } from '@/lib/progress-store'
+import ExerciseProgressChart from '@/components/ExerciseProgressChart'
+import { Search, Filter, TrendingUp, Calendar, Target, Zap } from 'lucide-react'
+import { cn } from '@/lib/utils'
 
 export default function WorkoutsPage() {
   const { data: session, status } = useSession()
@@ -15,6 +19,16 @@ export default function WorkoutsPage() {
   const [selectedEquipment, setSelectedEquipment] = useState<string[]>([])
   const [selectedDifficulty, setSelectedDifficulty] = useState('')
   const [showFilters, setShowFilters] = useState(false)
+  const [selectedExercise, setSelectedExercise] = useState<Exercise | null>(null)
+  const [showProgressModal, setShowProgressModal] = useState(false)
+
+  const { 
+    exerciseProgress, 
+    stats, 
+    getExerciseProgress, 
+    fetchExerciseHistory,
+    isLoading: progressLoading 
+  } = useProgressStore()
 
   // Redirect if not authenticated
   useEffect(() => {
@@ -46,324 +60,387 @@ export default function WorkoutsPage() {
     setFilteredExercises(filtered)
   }, [searchTerm, selectedCategory, selectedMuscleGroups, selectedEquipment, selectedDifficulty])
 
-  const toggleMuscleGroup = (muscleGroup: string) => {
-    setSelectedMuscleGroups(prev =>
-      prev.includes(muscleGroup)
-        ? prev.filter(mg => mg !== muscleGroup)
-        : [...prev, muscleGroup]
-    )
-  }
-
-  const toggleEquipment = (equipment: string) => {
-    setSelectedEquipment(prev =>
-      prev.includes(equipment)
-        ? prev.filter(eq => eq !== equipment)
-        : [...prev, equipment]
-    )
-  }
-
-  const clearFilters = () => {
-    setSearchTerm('')
-    setSelectedCategory('')
-    setSelectedMuscleGroups([])
-    setSelectedEquipment([])
-    setSelectedDifficulty('')
-  }
-
-  const getDifficultyColor = (difficulty: string) => {
-    switch (difficulty) {
-      case 'beginner': return 'bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-300'
-      case 'intermediate': return 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/20 dark:text-yellow-300'
-      case 'advanced': return 'bg-red-100 text-red-800 dark:bg-red-900/20 dark:text-red-300'
-      default: return 'bg-gray-100 text-gray-800 dark:bg-gray-900/20 dark:text-gray-300'
+  const handleExerciseClick = async (exercise: Exercise) => {
+    setSelectedExercise(exercise)
+    setShowProgressModal(true)
+    
+    // Fetch exercise history if not already loaded
+    const progress = getExerciseProgress(exercise.id)
+    if (!progress) {
+      await fetchExerciseHistory(exercise.id)
     }
   }
 
-  const getCategoryIcon = (category: string) => {
-    switch (category) {
-      case 'strength': return '💪'
-      case 'cardio': return '❤️'
-      case 'flexibility': return '🧘'
-      case 'balance': return '⚖️'
-      default: return '🏋️'
+  const getExerciseProgressData = (exerciseId: string) => {
+    return exerciseProgress[exerciseId] || null
+  }
+
+  const getProgressStats = () => {
+    if (!stats) return null
+    
+    return {
+      totalExercises: stats.totalExercises,
+      exercisesWithProgress: stats.exercisesWithProgress,
+      totalSessions: stats.totalSessions,
+      averageVolume: stats.averageVolume,
+      mostImprovedExercise: stats.mostImprovedExercise,
+      consistencyScore: stats.consistencyScore
     }
   }
 
-  if (status === 'loading') {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-primary"></div>
-      </div>
-    )
-  }
+  const progressStats = getProgressStats()
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-green-50 to-blue-50 dark:from-green-950/20 dark:to-blue-950/20">
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 dark:from-slate-900 dark:to-slate-800">
       <div className="container mx-auto px-4 py-8">
         {/* Header */}
         <div className="mb-8">
-          <h1 className="text-4xl font-bold text-foreground mb-4">Exercise Library</h1>
-          <p className="text-muted-foreground text-lg">
-            Discover {exercises.length}+ exercises to build your perfect workout
+          <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">
+            Exercise Library
+          </h1>
+          <p className="text-gray-600 dark:text-gray-300">
+            Browse exercises and track your progress
           </p>
         </div>
 
-        {/* Search and Filters */}
-        <div className="mb-8 space-y-4">
-          {/* Search Bar */}
-          <div className="relative">
-            <input
-              type="text"
-              placeholder="Search exercises..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full px-4 py-3 pl-12 border border-input rounded-lg bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:border-transparent"
-            />
-            <span className="absolute left-4 top-1/2 transform -translate-y-1/2 text-muted-foreground">
-              🔍
-            </span>
+        {/* Progress Overview */}
+        {progressStats && (
+          <div className="mb-8 grid grid-cols-1 md:grid-cols-4 gap-4">
+            <div className="bg-white dark:bg-gray-800 rounded-xl p-4 shadow-sm border">
+              <div className="flex items-center gap-3">
+                <div className="p-2 bg-blue-100 dark:bg-blue-900 rounded-lg">
+                  <Target className="w-5 h-5 text-blue-600 dark:text-blue-400" />
+                </div>
+                <div>
+                  <p className="text-sm text-gray-600 dark:text-gray-400">Total Exercises</p>
+                  <p className="text-xl font-bold">{progressStats.totalExercises}</p>
+                </div>
+              </div>
+            </div>
+            
+            <div className="bg-white dark:bg-gray-800 rounded-xl p-4 shadow-sm border">
+              <div className="flex items-center gap-3">
+                <div className="p-2 bg-green-100 dark:bg-green-900 rounded-lg">
+                  <TrendingUp className="w-5 h-5 text-green-600 dark:text-green-400" />
+                </div>
+                <div>
+                  <p className="text-sm text-gray-600 dark:text-gray-400">With Progress</p>
+                  <p className="text-xl font-bold">{progressStats.exercisesWithProgress}</p>
+                </div>
+              </div>
+            </div>
+            
+            <div className="bg-white dark:bg-gray-800 rounded-xl p-4 shadow-sm border">
+              <div className="flex items-center gap-3">
+                <div className="p-2 bg-purple-100 dark:bg-purple-900 rounded-lg">
+                  <Calendar className="w-5 h-5 text-purple-600 dark:text-purple-400" />
+                </div>
+                <div>
+                  <p className="text-sm text-gray-600 dark:text-gray-400">Total Sessions</p>
+                  <p className="text-xl font-bold">{progressStats.totalSessions}</p>
+                </div>
+              </div>
+            </div>
+            
+            <div className="bg-white dark:bg-gray-800 rounded-xl p-4 shadow-sm border">
+              <div className="flex items-center gap-3">
+                <div className="p-2 bg-orange-100 dark:bg-orange-900 rounded-lg">
+                  <Zap className="w-5 h-5 text-orange-600 dark:text-orange-400" />
+                </div>
+                <div>
+                  <p className="text-sm text-gray-600 dark:text-gray-400">Avg Volume</p>
+                  <p className="text-xl font-bold">{progressStats.averageVolume} lbs</p>
+                </div>
+              </div>
+            </div>
           </div>
+        )}
 
-          {/* Filter Toggle */}
-          <div className="flex items-center justify-between">
+        {/* Search and Filters */}
+        <div className="mb-6">
+          <div className="flex flex-col sm:flex-row gap-4">
+            {/* Search */}
+            <div className="relative flex-1">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
+              <input
+                type="text"
+                placeholder="Search exercises..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="w-full pl-10 pr-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              />
+            </div>
+            
+            {/* Filter Toggle */}
             <button
               onClick={() => setShowFilters(!showFilters)}
-              className="px-4 py-2 border border-border rounded-lg bg-background hover:bg-accent transition-colors"
+              className="flex items-center gap-2 px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
             >
-              {showFilters ? 'Hide' : 'Show'} Filters
+              <Filter className="w-5 h-5" />
+              Filters
             </button>
-            {(searchTerm || selectedCategory || selectedMuscleGroups.length > 0 || selectedEquipment.length > 0 || selectedDifficulty) && (
-              <button
-                onClick={clearFilters}
-                className="px-4 py-2 text-primary hover:underline"
-              >
-                Clear All Filters
-              </button>
-            )}
           </div>
 
-          {/* Filters Panel */}
+          {/* Filter Options */}
           {showFilters && (
-            <div className="bg-card border rounded-lg p-6 space-y-6">
-              {/* Category Filter */}
-              <div>
-                <h3 className="font-semibold mb-3">Category</h3>
-                <div className="flex flex-wrap gap-2">
-                  {exerciseCategories.categories.map(category => (
-                    <button
-                      key={category}
-                      onClick={() => setSelectedCategory(selectedCategory === category ? '' : category)}
-                      className={`px-3 py-1 rounded-full text-sm transition-colors ${
-                        selectedCategory === category
-                          ? 'bg-primary text-primary-foreground'
-                          : 'bg-accent text-accent-foreground hover:bg-accent/80'
-                      }`}
-                    >
-                      {getCategoryIcon(category)} {category}
-                    </button>
-                  ))}
+            <div className="mt-4 p-4 bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700">
+              <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                {/* Category Filter */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                    Category
+                  </label>
+                  <select
+                    value={selectedCategory}
+                    onChange={(e) => setSelectedCategory(e.target.value)}
+                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  >
+                    <option value="">All Categories</option>
+                    {exerciseCategories.categories.map((category) => (
+                      <option key={category} value={category}>
+                        {category.charAt(0).toUpperCase() + category.slice(1)}
+                      </option>
+                    ))}
+                  </select>
                 </div>
-              </div>
 
-              {/* Muscle Groups Filter */}
-              <div>
-                <h3 className="font-semibold mb-3">Muscle Groups</h3>
-                <div className="flex flex-wrap gap-2">
-                  {exerciseCategories.muscleGroups.map(muscleGroup => (
-                    <button
-                      key={muscleGroup}
-                      onClick={() => toggleMuscleGroup(muscleGroup)}
-                      className={`px-3 py-1 rounded-full text-sm transition-colors ${
-                        selectedMuscleGroups.includes(muscleGroup)
-                          ? 'bg-primary text-primary-foreground'
-                          : 'bg-accent text-accent-foreground hover:bg-accent/80'
-                      }`}
-                    >
-                      {muscleGroup}
-                    </button>
-                  ))}
+                {/* Difficulty Filter */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                    Difficulty
+                  </label>
+                  <select
+                    value={selectedDifficulty}
+                    onChange={(e) => setSelectedDifficulty(e.target.value)}
+                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  >
+                    <option value="">All Levels</option>
+                    <option value="beginner">Beginner</option>
+                    <option value="intermediate">Intermediate</option>
+                    <option value="advanced">Advanced</option>
+                  </select>
                 </div>
-              </div>
 
-              {/* Equipment Filter */}
-              <div>
-                <h3 className="font-semibold mb-3">Equipment</h3>
-                <div className="flex flex-wrap gap-2">
-                  {exerciseCategories.equipment.map(equipment => (
-                    <button
-                      key={equipment}
-                      onClick={() => toggleEquipment(equipment)}
-                      className={`px-3 py-1 rounded-full text-sm transition-colors ${
-                        selectedEquipment.includes(equipment)
-                          ? 'bg-primary text-primary-foreground'
-                          : 'bg-accent text-accent-foreground hover:bg-accent/80'
-                      }`}
-                    >
-                      {equipment}
-                    </button>
-                  ))}
+                {/* Equipment Filter */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                    Equipment
+                  </label>
+                  <select
+                    value={selectedEquipment[0] || ''}
+                    onChange={(e) => setSelectedEquipment(e.target.value ? [e.target.value] : [])}
+                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  >
+                    <option value="">All Equipment</option>
+                    <option value="bodyweight">Bodyweight</option>
+                    <option value="dumbbells">Dumbbells</option>
+                    <option value="barbell">Barbell</option>
+                    <option value="resistance_bands">Resistance Bands</option>
+                    <option value="pull_up_bar">Pull-up Bar</option>
+                    <option value="yoga_mat">Yoga Mat</option>
+                    <option value="cardio_machine">Cardio Machine</option>
+                  </select>
                 </div>
-              </div>
 
-              {/* Difficulty Filter */}
-              <div>
-                <h3 className="font-semibold mb-3">Difficulty</h3>
-                <div className="flex flex-wrap gap-2">
-                  {exerciseCategories.difficulties.map(difficulty => (
-                    <button
-                      key={difficulty}
-                      onClick={() => setSelectedDifficulty(selectedDifficulty === difficulty ? '' : difficulty)}
-                      className={`px-3 py-1 rounded-full text-sm transition-colors ${
-                        selectedDifficulty === difficulty
-                          ? 'bg-primary text-primary-foreground'
-                          : 'bg-accent text-accent-foreground hover:bg-accent/80'
-                      }`}
-                    >
-                      {difficulty}
-                    </button>
-                  ))}
+                {/* Muscle Groups Filter */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                    Muscle Group
+                  </label>
+                  <select
+                    value={selectedMuscleGroups[0] || ''}
+                    onChange={(e) => setSelectedMuscleGroups(e.target.value ? [e.target.value] : [])}
+                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  >
+                    <option value="">All Muscle Groups</option>
+                    <option value="chest">Chest</option>
+                    <option value="back">Back</option>
+                    <option value="shoulders">Shoulders</option>
+                    <option value="biceps">Biceps</option>
+                    <option value="triceps">Triceps</option>
+                    <option value="quadriceps">Quadriceps</option>
+                    <option value="hamstrings">Hamstrings</option>
+                    <option value="glutes">Glutes</option>
+                    <option value="core">Core</option>
+                    <option value="calves">Calves</option>
+                  </select>
                 </div>
               </div>
             </div>
           )}
         </div>
 
-        {/* Results Count */}
-        <div className="mb-6">
-          <p className="text-muted-foreground">
-            Showing {filteredExercises.length} of {exercises.length} exercises
-          </p>
-        </div>
-
         {/* Exercise Grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {filteredExercises.map((exercise) => (
-            <div
-              key={exercise.id}
-              className="bg-card border rounded-lg p-6 hover:shadow-lg transition-all duration-200 hover:scale-105"
-            >
-              {/* Exercise Header */}
-              <div className="flex items-start justify-between mb-4">
-                <div className="flex-1">
-                  <h3 className="text-xl font-semibold text-foreground mb-2">
-                    {exercise.name}
-                  </h3>
-                  <div className="flex items-center gap-2 mb-2">
-                    <span className="text-2xl">{getCategoryIcon(exercise.category)}</span>
-                    <span className="text-sm text-muted-foreground capitalize">
+          {filteredExercises.map((exercise) => {
+            const progress = getExerciseProgressData(exercise.id)
+            const hasProgress = progress && progress.history.length > 0
+            
+            return (
+              <div
+                key={exercise.id}
+                onClick={() => handleExerciseClick(exercise)}
+                className={cn(
+                  "bg-white dark:bg-gray-800 rounded-xl p-6 shadow-sm border cursor-pointer transition-all duration-200 hover:shadow-md hover:scale-105",
+                  hasProgress && "ring-2 ring-blue-500 ring-opacity-50"
+                )}
+              >
+                <div className="flex justify-between items-start mb-4">
+                  <div>
+                    <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-1">
+                      {exercise.name}
+                    </h3>
+                    <p className="text-sm text-gray-600 dark:text-gray-400 capitalize">
                       {exercise.category}
-                    </span>
+                    </p>
                   </div>
+                  {hasProgress && (
+                    <div className="flex items-center gap-1 text-blue-600 dark:text-blue-400">
+                      <TrendingUp className="w-4 h-4" />
+                      <span className="text-xs font-medium">Progress</span>
+                    </div>
+                  )}
                 </div>
-                <span className={`px-2 py-1 rounded-full text-xs font-medium ${getDifficultyColor(exercise.difficulty)}`}>
-                  {exercise.difficulty}
-                </span>
-              </div>
 
-              {/* Muscle Groups */}
-              <div className="mb-4">
-                <h4 className="text-sm font-medium text-muted-foreground mb-2">Muscle Groups</h4>
-                <div className="flex flex-wrap gap-1">
-                  {exercise.muscleGroups.map((muscleGroup) => (
-                    <span
-                      key={muscleGroup}
-                      className="px-2 py-1 bg-accent text-accent-foreground rounded text-xs"
-                    >
-                      {muscleGroup}
-                    </span>
-                  ))}
+                <div className="space-y-3">
+                  {/* Muscle Groups */}
+                  <div>
+                    <p className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-1">
+                      Target Muscles
+                    </p>
+                    <div className="flex flex-wrap gap-1">
+                      {exercise.muscleGroups.slice(0, 3).map((muscle) => (
+                        <span
+                          key={muscle}
+                          className="px-2 py-1 bg-gray-100 dark:bg-gray-700 text-xs text-gray-700 dark:text-gray-300 rounded-full"
+                        >
+                          {muscle}
+                        </span>
+                      ))}
+                      {exercise.muscleGroups.length > 3 && (
+                        <span className="px-2 py-1 bg-gray-100 dark:bg-gray-700 text-xs text-gray-700 dark:text-gray-300 rounded-full">
+                          +{exercise.muscleGroups.length - 3}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Equipment & Difficulty */}
+                  <div className="flex justify-between items-center">
+                    <div className="flex items-center gap-2">
+                      <span className={cn(
+                        "px-2 py-1 text-xs font-medium rounded-full",
+                        exercise.difficulty === 'beginner' && "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200",
+                        exercise.difficulty === 'intermediate' && "bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200",
+                        exercise.difficulty === 'advanced' && "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200"
+                      )}>
+                        {exercise.difficulty}
+                      </span>
+                    </div>
+                    <div className="text-xs text-gray-500 dark:text-gray-400">
+                      {exercise.equipment.join(', ')}
+                    </div>
+                  </div>
+
+                  {/* Progress Preview */}
+                  {hasProgress && (
+                    <div className="pt-3 border-t border-gray-200 dark:border-gray-700">
+                      <div className="flex justify-between text-sm">
+                        <span className="text-gray-600 dark:text-gray-400">Max Weight:</span>
+                        <span className="font-semibold text-gray-900 dark:text-white">
+                          {progress.personalBests.maxWeight} lbs
+                        </span>
+                      </div>
+                      <div className="flex justify-between text-sm">
+                        <span className="text-gray-600 dark:text-gray-400">Sessions:</span>
+                        <span className="font-semibold text-gray-900 dark:text-white">
+                          {progress.history.length}
+                        </span>
+                      </div>
+                    </div>
+                  )}
                 </div>
               </div>
-
-              {/* Equipment */}
-              <div className="mb-4">
-                <h4 className="text-sm font-medium text-muted-foreground mb-2">Equipment</h4>
-                <div className="flex flex-wrap gap-1">
-                  {exercise.equipment.map((equipment) => (
-                    <span
-                      key={equipment}
-                      className="px-2 py-1 bg-secondary text-secondary-foreground rounded text-xs"
-                    >
-                      {equipment}
-                    </span>
-                  ))}
-                </div>
-              </div>
-
-              {/* Exercise Details */}
-              <div className="mb-4">
-                <p className="text-sm text-muted-foreground line-clamp-3">
-                  {exercise.instructions}
-                </p>
-              </div>
-
-              {/* Exercise Stats */}
-              <div className="grid grid-cols-2 gap-4 text-sm">
-                {exercise.sets && exercise.reps && (
-                  <div>
-                    <span className="text-muted-foreground">Sets/Reps:</span>
-                    <div className="font-medium">{exercise.sets} × {exercise.reps}</div>
-                  </div>
-                )}
-                {exercise.duration && (
-                  <div>
-                    <span className="text-muted-foreground">Duration:</span>
-                    <div className="font-medium">{Math.round(exercise.duration / 60)} min</div>
-                  </div>
-                )}
-                {exercise.caloriesPerMinute && (
-                  <div>
-                    <span className="text-muted-foreground">Calories/min:</span>
-                    <div className="font-medium">{exercise.caloriesPerMinute}</div>
-                  </div>
-                )}
-                {exercise.restTime && (
-                  <div>
-                    <span className="text-muted-foreground">Rest:</span>
-                    <div className="font-medium">{exercise.restTime}s</div>
-                  </div>
-                )}
-              </div>
-
-              {/* Tips */}
-              {exercise.tips.length > 0 && (
-                <div className="mt-4 pt-4 border-t border-border">
-                  <h4 className="text-sm font-medium text-muted-foreground mb-2">Tips</h4>
-                  <ul className="text-xs text-muted-foreground space-y-1">
-                    {exercise.tips.slice(0, 2).map((tip, index) => (
-                      <li key={index} className="flex items-start gap-2">
-                        <span className="text-primary">•</span>
-                        <span>{tip}</span>
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              )}
-
-              {/* Action Button */}
-              <div className="mt-4 pt-4 border-t border-border">
-                <button className="w-full px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors">
-                  Add to Workout
-                </button>
-              </div>
-            </div>
-          ))}
+            )
+          })}
         </div>
 
-        {/* No Results */}
-        {filteredExercises.length === 0 && (
-          <div className="text-center py-12">
-            <div className="text-6xl mb-4">🏋️‍♂️</div>
-            <h3 className="text-xl font-semibold text-foreground mb-2">No exercises found</h3>
-            <p className="text-muted-foreground mb-4">
-              Try adjusting your search terms or filters
-            </p>
-            <button
-              onClick={clearFilters}
-              className="px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors"
-            >
-              Clear All Filters
-            </button>
+        {/* Progress Modal */}
+        {showProgressModal && selectedExercise && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+            <div className="bg-white dark:bg-gray-800 rounded-xl max-w-4xl w-full max-h-[90vh] overflow-y-auto">
+              <div className="p-6 border-b border-gray-200 dark:border-gray-700">
+                <div className="flex justify-between items-start">
+                  <div>
+                    <h2 className="text-2xl font-bold text-gray-900 dark:text-white">
+                      {selectedExercise.name}
+                    </h2>
+                    <p className="text-gray-600 dark:text-gray-400 capitalize">
+                      {selectedExercise.category} • {selectedExercise.difficulty}
+                    </p>
+                  </div>
+                  <button
+                    onClick={() => setShowProgressModal(false)}
+                    className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200"
+                  >
+                    ✕
+                  </button>
+                </div>
+              </div>
+              
+              <div className="p-6">
+                {progressLoading ? (
+                  <div className="flex items-center justify-center h-64">
+                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+                  </div>
+                ) : (
+                  <div className="space-y-6">
+                    {/* Exercise Info */}
+                    <div className="bg-gray-50 dark:bg-gray-700 rounded-lg p-4">
+                      <h3 className="font-semibold mb-2">Exercise Details</h3>
+                      <p className="text-sm text-gray-600 dark:text-gray-400 mb-3">
+                        {selectedExercise.instructions}
+                      </p>
+                      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+                        <div>
+                          <span className="text-gray-500 dark:text-gray-400">Muscle Groups:</span>
+                          <p className="font-medium">{selectedExercise.muscleGroups.join(', ')}</p>
+                        </div>
+                        <div>
+                          <span className="text-gray-500 dark:text-gray-400">Equipment:</span>
+                          <p className="font-medium">{selectedExercise.equipment.join(', ')}</p>
+                        </div>
+                        <div>
+                          <span className="text-gray-500 dark:text-gray-400">Difficulty:</span>
+                          <p className="font-medium capitalize">{selectedExercise.difficulty}</p>
+                        </div>
+                        <div>
+                          <span className="text-gray-500 dark:text-gray-400">Calories/min:</span>
+                          <p className="font-medium">{selectedExercise.caloriesPerMinute || 'N/A'}</p>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Progress Chart */}
+                    {getExerciseProgressData(selectedExercise.id) ? (
+                      <ExerciseProgressChart 
+                        progress={getExerciseProgressData(selectedExercise.id)!} 
+                      />
+                    ) : (
+                      <div className="text-center py-12">
+                        <TrendingUp className="w-12 h-12 text-gray-400 mx-auto mb-4" />
+                        <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
+                          No Progress Data Yet
+                        </h3>
+                        <p className="text-gray-600 dark:text-gray-400">
+                          Complete a workout with this exercise to start tracking your progress.
+                        </p>
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+            </div>
           </div>
         )}
       </div>
