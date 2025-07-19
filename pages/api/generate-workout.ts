@@ -305,7 +305,7 @@ function constructWorkoutPrompt(
   customPreferences?: Partial<UserProfile['preferences']>
 ): string {
   const workoutHistory = recentWorkouts.map(w => ({
-    exercises: w.exercises.map(e => e.exercise).join(', '),
+    exercises: w.routine.map(e => e.exercise).join(', '),
     difficulty: w.feedback?.difficulty || 5,
     enjoyment: w.feedback?.enjoyment || 5
   }))
@@ -318,8 +318,8 @@ USER PROFILE:
 - Available Equipment: ${userProfile.equipment.join(', ')}
 - Preferred Duration: ${userProfile.preferences.duration} minutes
 - Intensity Preference: ${userProfile.preferences.intensity}
-- Focus Areas: ${userProfile.preferences.focus.join(', ')}
-- Injuries to Avoid: ${userProfile.preferences.avoidInjuries?.join(', ') || 'None'}
+- Focus Areas: ${userProfile.goals.join(', ')}
+- Injuries to Avoid: ${userProfile.preferences.injuries?.join(', ') || 'None'}
 
 RECENT WORKOUT HISTORY (for variety and progression):
 ${workoutHistory.map((w, i) => `${i + 1}. ${w.exercises} (Difficulty: ${w.difficulty}/10, Enjoyment: ${w.enjoyment}/10)`).join('\n')}
