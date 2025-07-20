@@ -21,7 +21,7 @@ export default function SignupPage() {
     // Check if user is already logged in
     getSession().then((session) => {
       if (session) {
-        router.push('/dashboard')
+        router.push('/onboarding')
       }
     })
   }, [router])
@@ -82,7 +82,7 @@ export default function SignupPage() {
       if (result?.error) {
         setError('Account created but login failed. Please try logging in.')
       } else {
-        router.push('/dashboard')
+        router.push('/onboarding')
       }
     } catch (error) {
       setError('An error occurred. Please try again.')
@@ -97,7 +97,7 @@ export default function SignupPage() {
 
     try {
       const result = await signIn('google', {
-        callbackUrl: '/dashboard',
+        callbackUrl: '/onboarding',
         redirect: false,
       })
 

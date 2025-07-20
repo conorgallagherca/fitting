@@ -38,7 +38,7 @@ interface OnboardingData {
   }
   
   // Notification preferences
-  notifications: {
+  notifications?: {
     dailyReminders: boolean
     achievementAlerts: boolean
     streakReminders: boolean
@@ -49,13 +49,17 @@ interface OnboardingData {
 interface OnboardingResponse {
   success: boolean
   message: string
-  user?: {
-    id: string
-    profile: OnboardingData
-    seedWorkouts: number
-    nextSteps: string[]
+  user: any
+  firstWorkout?: any
+  nextSteps?: string[]
+  metadata?: {
+    profileCreated: boolean
+    firstWorkoutGenerated: boolean
+    userSegment: string
+    primaryGoal: string
+    equipmentLevel: number
+    lastUpdate: string
   }
-  error?: string
 }
 
 export default async function handler(
@@ -66,46 +70,59 @@ export default async function handler(
     return res.status(405).json({
       success: false,
       message: 'Method not allowed',
-      error: 'Only POST method is supported'
+      user: null
     })
   }
 
   try {
-    // Authentication check
+    // Authenticate user
     const session = await getServerSession(req, res, authOptions)
+    
     if (!session?.user?.email) {
       return res.status(401).json({
         success: false,
         message: 'Authentication required',
-        error: 'Please sign in to complete onboarding'
+        user: null
       })
     }
 
-    // Validate request body
+    // Extract and validate onboarding data
     const onboardingData: OnboardingData = req.body
-    
-    if (!onboardingData.fitnessLevel || !onboardingData.goals || !onboardingData.equipment) {
+
+    // Validation
+    if (!onboardingData.fitnessLevel) {
       return res.status(400).json({
         success: false,
-        message: 'Missing required fields',
-        error: 'Fitness level, goals, and equipment are required'
+        message: 'Fitness level is required',
+        user: null
       })
     }
 
-    // Validate enum values
-    const validFitnessLevels = ['beginner', 'intermediate', 'advanced']
-    const validGoals = ['muscle_gain', 'weight_loss', 'endurance', 'strength', 'flexibility', 'general_fitness']
-    const validEquipment = ['bodyweight', 'dumbbells', 'barbell', 'resistance_bands', 'pull_up_bar', 'yoga_mat', 'cardio_machine']
-    
-    if (!validFitnessLevels.includes(onboardingData.fitnessLevel)) {
+    if (!onboardingData.goals || onboardingData.goals.length === 0) {
       return res.status(400).json({
         success: false,
-        message: 'Invalid fitness level',
-        error: 'Fitness level must be beginner, intermediate, or advanced'
+        message: 'At least one fitness goal is required',
+        user: null
       })
     }
 
-    // TODO: Database operations - Replace with actual Prisma queries when network issues are resolved
+    if (!onboardingData.equipment || onboardingData.equipment.length === 0) {
+      return res.status(400).json({
+        success: false,
+        message: 'At least one equipment option is required',
+        user: null
+      })
+    }
+
+    if (!onboardingData.preferences?.duration || onboardingData.preferences.duration < 15) {
+      return res.status(400).json({
+        success: false,
+        message: 'Workout duration must be at least 15 minutes',
+        user: null
+      })
+    }
+
+    // TODO: Database operations - Replace with actual Prisma queries when database is connected
     /*
     const userId = session.user.id
 
@@ -149,41 +166,98 @@ export default async function handler(
       equipment: onboardingData.equipment
     })
 
-    // Determine next steps based on user profile
+    // Create mock user profile with onboarding data
+    const mockUser = {
+      id: userId,
+      email: session.user.email,
+      name: onboardingData.name || session.user.name,
+      image: session.user.image,
+      fitnessLevel: onboardingData.fitnessLevel,
+      goals: onboardingData.goals,
+      equipment: onboardingData.equipment,
+      preferences: onboardingData.preferences,
+      streak: 0,
+      longestStreak: 0,
+      totalWorkouts: 0,
+      level: 1,
+      xp: 0,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+      lastActiveAt: new Date().toISOString()
+    }
+
+    // Generate first AI workout using the workout generation API
+    let firstWorkout = null
+    try {
+      const baseUrl = process.env.NEXTAUTH_URL || 'http://localhost:3000'
+      const workoutResponse = await fetch(`${baseUrl}/api/generate-workout`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Cookie': req.headers.cookie || ''
+        },
+        body: JSON.stringify({
+          fitnessLevel: onboardingData.fitnessLevel,
+          goals: onboardingData.goals,
+          equipment: onboardingData.equipment,
+          duration: onboardingData.preferences.duration,
+          intensity: onboardingData.preferences.intensity
+        })
+      })
+
+      if (workoutResponse.ok) {
+        const workoutData = await workoutResponse.json()
+        firstWorkout = workoutData.workout
+      }
+    } catch (error) {
+      console.error('Error generating AI workout:', error)
+      // Fallback to first seed workout if AI generation fails
+      firstWorkout = seedWorkouts[0] || null
+    }
+
+    // Determine user segment and metadata
+    const primaryGoal = onboardingData.goals[0]
+    const equipmentLevel = onboardingData.equipment.length
+    const userSegment = `${onboardingData.fitnessLevel}_${primaryGoal}`
+
+    // Generate next steps based on user profile
     const nextSteps = [
-      'Complete your first workout',
-      'Set up daily reminder notifications',
-      'Explore the workout history'
+      'Complete your first workout to earn XP and level up!',
+      'Set up your workout schedule in the calendar',
+      'Explore the exercise library to discover new moves',
+      'Connect with friends to share your fitness journey'
     ]
 
-    if (onboardingData.goals.includes('weight_loss')) {
-      nextSteps.push('Consider tracking your nutrition')
+    if (onboardingData.preferences.intensity === 'high') {
+      nextSteps.push('Consider adding recovery days to prevent burnout')
     }
 
-    if (onboardingData.equipment.length === 1 && onboardingData.equipment[0] === 'bodyweight') {
-      nextSteps.push('Browse equipment recommendations for home workouts')
+    if (onboardingData.equipment.includes('bodyweight')) {
+      nextSteps.push('Try our bodyweight-only workout challenges')
     }
 
-    const response: OnboardingResponse = {
+    return res.status(200).json({
       success: true,
-      message: 'Onboarding completed successfully! Welcome to FitLingo! 🎉',
-      user: {
-        id: userId,
-        profile: onboardingData,
-        seedWorkouts: seedWorkouts.length,
-        nextSteps
+      message: 'Onboarding completed successfully!',
+      user: mockUser,
+      firstWorkout,
+      nextSteps,
+      metadata: {
+        profileCreated: true,
+        firstWorkoutGenerated: !!firstWorkout,
+        userSegment,
+        primaryGoal,
+        equipmentLevel,
+        lastUpdate: new Date().toISOString()
       }
-    }
-
-    return res.status(200).json(response)
+    })
 
   } catch (error) {
     console.error('Onboarding error:', error)
-    
     return res.status(500).json({
       success: false,
-      message: 'Failed to complete onboarding',
-      error: error instanceof Error ? error.message : 'Internal server error'
+      message: 'Internal server error during onboarding',
+      user: null
     })
   }
-} 
+}
