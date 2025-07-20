@@ -223,58 +223,35 @@ export const useDashboardStore = create<DashboardState>()(
         if (!todaysWorkout || !userStats) return
 
         try {
-          // TODO: API call to mark workout as completed
-          // const response = await fetch('/api/complete-workout', {
-          //   method: 'POST',
-          //   headers: { 'Content-Type': 'application/json' },
-          //   body: JSON.stringify({ workoutId: todaysWorkout.id })
-          // })
+          // API call to mark workout as completed
+          const response = await fetch('/api/complete-workout', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ workoutId: todaysWorkout.id })
+          })
 
-          // Simulate workout completion and stats update
-          const updatedStats: UserStats = {
-            ...userStats,
-            streak: userStats.streak + 1,
-            totalWorkouts: userStats.totalWorkouts + 1,
-            xp: userStats.xp + 50, // Award XP for completion
-            longestStreak: Math.max(userStats.longestStreak, userStats.streak + 1),
-            todaysProgress: {
-              workoutCompleted: true,
-              exercisesCompleted: get().generatedWorkout?.exercises.length || 0,
-              totalExercises: get().generatedWorkout?.exercises.length || 0
-            }
+          if (!response.ok) {
+            throw new Error('Failed to complete workout')
           }
 
-          // Check for level up
-          const newLevel = Math.floor(updatedStats.xp / 500) + 1
-          if (newLevel > updatedStats.level) {
-            updatedStats.level = newLevel
-            set({ showConfetti: true })
-          }
-
-          // Update completed workout
-          const completedWorkout = {
-            ...todaysWorkout,
-            completed: true
-          }
-
+          const result = await response.json()
+          
+          // Update local state with new stats
           set({
-            todaysWorkout: completedWorkout,
-            userStats: updatedStats,
-            isWorkoutActive: false,
-            workoutStartTime: null,
-            currentExerciseIndex: 0
+            userStats: result.userStats,
+            showConfetti: true
           })
 
           // Check for new achievements
-          get().checkForNewAchievements(updatedStats)
+          get().checkForNewAchievements(result.userStats)
 
         } catch (error) {
-          console.error('Failed to complete workout:', error)
-          set({ error: 'Failed to save workout completion' })
+          console.error('Error completing workout:', error)
+          set({ error: 'Failed to complete workout' })
         }
       },
 
-      // Log individual exercise completion with actual performance
+      // Log exercise completion with actual performance data
       logExerciseCompletion: (exerciseIndex: number, actualReps: number | string, notes?: string) => {
         const { exerciseProgress } = get()
         
@@ -282,9 +259,9 @@ export const useDashboardStore = create<DashboardState>()(
           if (index === exerciseIndex) {
             return {
               ...exercise,
-              completedSets: exercise.completedSets + 1,
-              actualReps: actualReps,
-              notes: notes || exercise.notes
+              actualReps,
+              notes: notes || exercise.notes,
+              completedSets: exercise.completedSets + 1
             }
           }
           return exercise
@@ -293,213 +270,146 @@ export const useDashboardStore = create<DashboardState>()(
         set({ exerciseProgress: updatedProgress })
       },
 
-      // Submit complete workout log with feedback
+      // Submit workout log with feedback
       submitWorkoutLog: async (feedback) => {
-        const { todaysWorkout, exerciseProgress, workoutStartTime, userStats } = get()
+        const { todaysWorkout, exerciseProgress, workoutStartTime } = get()
         
-        if (!todaysWorkout || !workoutStartTime) {
-          set({ error: 'No active workout to log' })
-          return
-        }
+        if (!todaysWorkout) return
 
-        set({ isLoggingWorkout: true, error: null })
+        set({ isLoggingWorkout: true })
 
         try {
-          // Calculate workout duration
-          const duration = Math.round((Date.now() - new Date(workoutStartTime).getTime()) / (1000 * 60))
-          
-          // Calculate completion percentage
-          const totalPlannedSets = exerciseProgress.reduce((sum, ex) => sum + ex.plannedSets, 0)
-          const totalCompletedSets = exerciseProgress.reduce((sum, ex) => sum + ex.completedSets, 0)
-          const completionPercentage = Math.round((totalCompletedSets / totalPlannedSets) * 100)
-
-          const workoutLog = {
+          const workoutData = {
             workoutId: todaysWorkout.id,
-            exercises: exerciseProgress,
+            startTime: workoutStartTime,
+            endTime: new Date().toISOString(),
+            exerciseProgress,
             feedback,
-            completionPercentage,
-            totalDuration: duration
+            completionPercentage: calculateCompletionPercentage(exerciseProgress)
           }
 
           const response = await fetch('/api/log-workout', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(workoutLog)
+            body: JSON.stringify(workoutData)
           })
 
           if (!response.ok) {
-            const errorData = await response.json()
-            throw new Error(errorData.message || 'Failed to log workout')
+            throw new Error('Failed to log workout')
           }
 
-          const data = await response.json()
+          const result = await response.json()
           
-          // Update user stats with new streak and XP
-          const updatedStats: UserStats = {
-            ...userStats!,
-            streak: data.streakUpdate.currentStreak,
-            longestStreak: data.streakUpdate.longestStreak,
-            totalWorkouts: (userStats?.totalWorkouts || 0) + 1,
-            xp: data.rewards.newXP,
-            level: data.rewards.newLevel,
-            todaysProgress: {
-              workoutCompleted: true,
-              exercisesCompleted: totalCompletedSets,
-              totalExercises: totalPlannedSets
-            }
-          }
-
-          // Update completed workout
-          const completedWorkout = {
-            ...todaysWorkout,
-            completed: true
-          }
-
+          // Update stats and trigger celebrations
           set({
-            todaysWorkout: completedWorkout,
-            userStats: updatedStats,
-            isWorkoutActive: false,
-            isLoggingWorkout: false,
-            hasLoggedToday: true,
-            workoutStartTime: null,
-            currentExerciseIndex: 0,
-            exerciseProgress: []
+            userStats: result.stats,
+            showConfetti: result.newBadges && result.newBadges.length > 0,
+            hasLoggedToday: true
           })
-
-          // GAMIFICATION INTEGRATION:
-          // Check for milestone achievements after successful workout completion
-          // This is where the badge system gets triggered
-          const gamificationStore = await import('./gamification-store').then(m => m.useGamificationStore)
-          
-          // Check for new badges based on updated stats
-          const milestoneStats = {
-            streak: updatedStats.streak,
-            totalWorkouts: updatedStats.totalWorkouts,
-            longestStreak: updatedStats.longestStreak,
-            completedToday: true
-          }
-          
-          const newBadges = gamificationStore.getState().checkMilestones(milestoneStats)
-          
-          // Show rewards and achievements
-          if (data.achievements && data.achievements.length > 0) {
-            set({ 
-              newAchievements: [...get().newAchievements, ...data.achievements],
-              showConfetti: true 
-            })
-          }
-
-          // Show confetti for badge unlocks
-          if (newBadges.length > 0) {
-            set({ showConfetti: true })
-          }
-
-          if (data.rewards.levelUp) {
-            set({ showConfetti: true })
-          }
-
-          // Check for streak celebrations
-          if (data.streakUpdate.currentStreak > (userStats?.streak || 0)) {
-            set({ showConfetti: true })
-          }
-
-          console.log('🎉 Workout logged successfully!')
-          console.log(`💪 Completion: ${completionPercentage}%`)
-          console.log(`🔥 Streak: ${data.streakUpdate.currentStreak} days`)
-          console.log(`⭐ XP Gained: ${data.rewards.xpGained}`)
-          
-          if (newBadges.length > 0) {
-            console.log(`🏆 New badges unlocked:`, newBadges.map(b => b.name))
-          }
 
         } catch (error) {
-          console.error('Failed to log workout:', error)
-          set({ 
-            error: error instanceof Error ? error.message : 'Failed to log workout',
-            isLoggingWorkout: false
-          })
+          console.error('Error logging workout:', error)
+          set({ error: 'Failed to log workout' })
+        } finally {
+          set({ isLoggingWorkout: false })
         }
       },
 
-      // Check for and unlock new achievements
+      // Check for new achievements based on updated stats
       checkForNewAchievements: (newStats: UserStats) => {
         const { achievements } = get()
-        const newlyUnlocked: Achievement[] = []
-
-        const updatedAchievements = achievements.map(achievement => {
-          if (achievement.unlocked) return achievement
-
-          let shouldUnlock = false
-
-          // Achievement logic
-          switch (achievement.id) {
-            case 'first_workout':
-              shouldUnlock = newStats.totalWorkouts >= 1
-              break
-            case 'streak_3':
-              shouldUnlock = newStats.streak >= 3
-              break
-            case 'streak_7':
-              shouldUnlock = newStats.streak >= 7
-              break
-            case 'streak_30':
-              shouldUnlock = newStats.streak >= 30
-              break
-            case 'level_2':
-              shouldUnlock = newStats.level >= 2
-              break
-            case 'level_5':
-              shouldUnlock = newStats.level >= 5
-              break
-            case 'workouts_10':
-              shouldUnlock = newStats.totalWorkouts >= 10
-              break
-            case 'workouts_50':
-              shouldUnlock = newStats.totalWorkouts >= 50
-              break
-          }
-
-          if (shouldUnlock) {
-            const unlockedAchievement = {
-              ...achievement,
-              unlocked: true,
-              unlockedAt: new Date().toISOString()
-            }
-            newlyUnlocked.push(unlockedAchievement)
-            return unlockedAchievement
-          }
-
-          return achievement
-        })
-
-        if (newlyUnlocked.length > 0) {
+        
+        const newAchievements: Achievement[] = []
+        
+        // Check for streak achievements
+        if (newStats.streak === 7 && !achievements.find(a => a.id === 'week_warrior')) {
+          newAchievements.push({
+            id: 'week_warrior',
+            title: 'Week Warrior',
+            description: 'Complete 7 workouts in a row',
+            icon: '🔥',
+            unlocked: true,
+            unlockedAt: new Date().toISOString()
+          })
+        }
+        
+        if (newStats.streak === 30 && !achievements.find(a => a.id === 'month_master')) {
+          newAchievements.push({
+            id: 'month_master',
+            title: 'Month Master',
+            description: 'Complete 30 workouts in a row',
+            icon: '👑',
+            unlocked: true,
+            unlockedAt: new Date().toISOString()
+          })
+        }
+        
+        // Check for workout count achievements
+        if (newStats.totalWorkouts === 10 && !achievements.find(a => a.id === 'dedicated_10')) {
+          newAchievements.push({
+            id: 'dedicated_10',
+            title: 'Dedicated',
+            description: 'Complete your first 10 workouts',
+            icon: '💪',
+            unlocked: true,
+            unlockedAt: new Date().toISOString()
+          })
+        }
+        
+        if (newStats.totalWorkouts === 50 && !achievements.find(a => a.id === 'fitness_fanatic')) {
+          newAchievements.push({
+            id: 'fitness_fanatic',
+            title: 'Fitness Fanatic',
+            description: 'Complete 50 workouts',
+            icon: '🏆',
+            unlocked: true,
+            unlockedAt: new Date().toISOString()
+          })
+        }
+        
+        // Check for level achievements
+        if (newStats.level === 5 && !achievements.find(a => a.id === 'level_5_legend')) {
+          newAchievements.push({
+            id: 'level_5_legend',
+            title: 'Level 5 Legend',
+            description: 'Reach level 5',
+            icon: '⭐',
+            unlocked: true,
+            unlockedAt: new Date().toISOString()
+          })
+        }
+        
+        if (newAchievements.length > 0) {
           set({
-            achievements: updatedAchievements,
-            newAchievements: [...get().newAchievements, ...newlyUnlocked],
-            showConfetti: true
+            achievements: [...achievements, ...newAchievements],
+            newAchievements: [...get().newAchievements, ...newAchievements]
           })
         }
       },
 
-      // Dismiss confetti animation
+      // Dismiss confetti celebration
       dismissConfetti: () => {
         set({ showConfetti: false })
       },
 
-      // Clear new achievements notifications
+      // Clear new achievements list
       clearNewAchievements: () => {
         set({ newAchievements: [] })
       },
 
-      // Utility actions
-      setError: (error) => set({ error }),
-      
+      // Set error message
+      setError: (error: string | null) => {
+        set({ error })
+      },
+
+      // Reset workout session state
       resetWorkoutSession: () => {
         set({
           isWorkoutActive: false,
-          workoutStartTime: null,
           currentExerciseIndex: 0,
-          isStartingWorkout: false
+          workoutStartTime: null,
+          exerciseProgress: [],
+          workoutDuration: 0
         })
       }
     }),
@@ -508,107 +418,66 @@ export const useDashboardStore = create<DashboardState>()(
       partialize: (state) => ({
         userStats: state.userStats,
         achievements: state.achievements,
-        todaysWorkout: state.todaysWorkout
+        hasLoggedToday: state.hasLoggedToday
       })
     }
   )
 )
 
-// Default achievements for gamification
+// Helper function to calculate completion percentage
+function calculateCompletionPercentage(exerciseProgress: DashboardState['exerciseProgress']): number {
+  if (exerciseProgress.length === 0) return 0
+  
+  const totalSets = exerciseProgress.reduce((total, exercise) => total + exercise.plannedSets, 0)
+  const completedSets = exerciseProgress.reduce((total, exercise) => total + exercise.completedSets, 0)
+  
+  return Math.round((completedSets / totalSets) * 100)
+}
+
+// Default achievements list
 function getDefaultAchievements(): Achievement[] {
   return [
     {
       id: 'first_workout',
-      title: 'Getting Started',
-      description: 'Complete your first workout',
-      icon: '🎯',
+      title: 'First Step',
+      description: 'Complete your very first workout',
+      icon: '🌟',
       unlocked: false
     },
     {
-      id: 'streak_3',
-      title: 'On a Roll',
-      description: 'Maintain a 3-day workout streak',
+      id: 'week_warrior',
+      title: 'Week Warrior',
+      description: 'Complete 7 workouts in a row',
       icon: '🔥',
       unlocked: false
     },
     {
-      id: 'streak_7',
-      title: 'Week Warrior',
-      description: 'Complete 7 days in a row',
-      icon: '⚡',
-      unlocked: false
-    },
-    {
-      id: 'streak_30',
-      title: 'Consistency King',
-      description: 'Achieve a 30-day streak',
+      id: 'month_master',
+      title: 'Month Master',
+      description: 'Complete 30 workouts in a row',
       icon: '👑',
       unlocked: false
     },
     {
-      id: 'level_2',
-      title: 'Level Up',
-      description: 'Reach fitness level 2',
-      icon: '📈',
-      unlocked: false
-    },
-    {
-      id: 'level_5',
-      title: 'Fitness Expert',
-      description: 'Reach fitness level 5',
-      icon: '🏆',
-      unlocked: false
-    },
-    {
-      id: 'workouts_10',
+      id: 'dedicated_10',
       title: 'Dedicated',
-      description: 'Complete 10 total workouts',
+      description: 'Complete your first 10 workouts',
       icon: '💪',
       unlocked: false
     },
     {
-      id: 'workouts_50',
-      title: 'Fitness Enthusiast',
-      description: 'Complete 50 total workouts',
-      icon: '🌟',
+      id: 'fitness_fanatic',
+      title: 'Fitness Fanatic',
+      description: 'Complete 50 workouts',
+      icon: '🏆',
+      unlocked: false
+    },
+    {
+      id: 'level_5_legend',
+      title: 'Level 5 Legend',
+      description: 'Reach level 5',
+      icon: '⭐',
       unlocked: false
     }
   ]
-}
-
-/*
-Dashboard Store Architecture Notes:
-
-1. REACTIVE STATE MANAGEMENT:
-   - Zustand provides lightweight, reactive state updates
-   - Automatic UI re-renders when workout data changes
-   - Persistent storage for offline access and consistency
-   - Optimistic updates for smooth user experience
-
-2. GAMIFICATION PSYCHOLOGY:
-   - Achievement system provides milestone rewards
-   - Streak tracking builds daily habits (Duolingo approach)
-   - XP and levels create sense of progression
-   - Confetti animations celebrate success moments
-
-3. WORKOUT SESSION FLOW:
-   - Track current exercise progress through workout
-   - Timer integration for rest periods and exercise duration
-   - Completion states for individual exercises and full workout
-   - Session management with start/pause/complete actions
-
-4. DATA FRESHNESS STRATEGY:
-   - Fetch today's workout on dashboard load
-   - Cache workout data for offline access
-   - Automatic generation if no workout exists
-   - Real-time updates for workout completion
-
-5. USER ENGAGEMENT OPTIMIZATION:
-   - Minimize loading states with cached data
-   - Immediate feedback for all user actions
-   - Progressive disclosure of workout information
-   - Celebration animations for motivation
-
-This store design creates an engaging, responsive dashboard
-that builds lasting fitness habits through smart gamification.
-*/ 
+} 

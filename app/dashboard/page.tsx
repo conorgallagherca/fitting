@@ -7,6 +7,7 @@ import { useDashboardStore } from '@/lib/dashboard-store'
 import { useGamificationStore } from '@/lib/gamification-store'
 import { useProfileStore } from '@/lib/profile-store'
 import BadgeDisplay, { BadgeCelebrationModal } from '@/components/BadgeDisplay'
+import WorkoutSession from '@/components/WorkoutSession'
 import { cn } from '@/lib/utils'
 
 export default function DashboardPage() {
@@ -45,6 +46,7 @@ export default function DashboardPage() {
   
   // Local state
   const [showNotificationSetup, setShowNotificationSetup] = useState(false)
+  const [showWorkoutSession, setShowWorkoutSession] = useState(false)
 
   // Authentication check
   useEffect(() => {
@@ -83,6 +85,21 @@ export default function DashboardPage() {
     updateNotificationSettings({ time })
   }
 
+  // Handle workout session
+  const handleStartWorkout = () => {
+    setShowWorkoutSession(true)
+  }
+
+  const handleWorkoutComplete = () => {
+    setShowWorkoutSession(false)
+    // Refresh dashboard data after workout completion
+    fetchTodaysWorkout()
+  }
+
+  const handleWorkoutExit = () => {
+    setShowWorkoutSession(false)
+  }
+
   // Testing functions for development
   const handleTestStreak = () => {
     const streakLength = parseInt(prompt('Enter streak length to test:') || '7')
@@ -99,6 +116,16 @@ export default function DashboardPage() {
       <div className="min-h-screen flex items-center justify-center">
         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-green-500"></div>
       </div>
+    )
+  }
+
+  // Show workout session if active
+  if (showWorkoutSession) {
+    return (
+      <WorkoutSession
+        onComplete={handleWorkoutComplete}
+        onExit={handleWorkoutExit}
+      />
     )
   }
 
@@ -150,7 +177,7 @@ export default function DashboardPage() {
                         </span>
                       ) : (
                         <button
-                          onClick={startWorkout}
+                          onClick={handleStartWorkout}
                           className="px-6 py-2 bg-gradient-to-r from-green-500 to-blue-600 text-white rounded-lg font-medium hover:from-green-600 hover:to-blue-700 transition-all"
                         >
                           Start Workout 💪
@@ -248,67 +275,62 @@ export default function DashboardPage() {
             </div>
 
             {/* Notification Settings */}
+            {!notifications.enabled && (
+              <div className="bg-card/50 backdrop-blur border rounded-xl p-6">
+                <h3 className="text-lg font-semibold mb-3">Stay Motivated 🔔</h3>
+                <p className="text-sm text-muted-foreground mb-4">
+                  Get daily reminders to keep your streak going!
+                </p>
+                <button
+                  onClick={handleEnableNotifications}
+                  className="w-full px-4 py-2 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 transition-colors"
+                >
+                  Enable Notifications
+                </button>
+              </div>
+            )}
+
+            {/* Quick Actions */}
             <div className="bg-card/50 backdrop-blur border rounded-xl p-6">
-              <h3 className="text-lg font-semibold mb-4">Daily Reminders 🔔</h3>
-              
-              {notifications.permission === 'granted' ? (
-                <div className="space-y-4">
-                  <div className="flex items-center justify-between">
-                    <span className="text-sm">Workout reminders</span>
-                    <label className="relative inline-flex items-center cursor-pointer">
-                      <input
-                        type="checkbox"
-                        checked={notifications.enabled}
-                        onChange={(e) => updateNotificationSettings({ enabled: e.target.checked })}
-                        className="sr-only peer"
-                      />
-                      <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-green-300 dark:peer-focus:ring-green-800 rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-green-600"></div>
-                    </label>
-                  </div>
-                  
-                  {notifications.enabled && (
-                    <div>
-                      <label className="block text-sm font-medium mb-2">Reminder time</label>
-                      <input
-                        type="time"
-                        value={notifications.time}
-                        onChange={(e) => handleNotificationTimeChange(e.target.value)}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg dark:border-gray-600 dark:bg-gray-800"
-                      />
-                    </div>
-                  )}
-                </div>
-              ) : (
-                <div className="text-center">
-                  <p className="text-sm text-muted-foreground mb-4">
-                    Get daily workout reminders to build your habit!
-                  </p>
-                  <button
-                    onClick={handleEnableNotifications}
-                    className="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm hover:bg-blue-700 transition-colors"
-                  >
-                    Enable Notifications
-                  </button>
-                </div>
-              )}
+              <h3 className="text-lg font-semibold mb-4">Quick Actions</h3>
+              <div className="space-y-3">
+                <button
+                  onClick={() => router.push('/workouts')}
+                  className="w-full px-4 py-2 bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-300 rounded-lg font-medium hover:bg-slate-200 dark:hover:bg-slate-600 transition-colors"
+                >
+                  Browse Exercises
+                </button>
+                <button
+                  onClick={() => router.push('/history')}
+                  className="w-full px-4 py-2 bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-300 rounded-lg font-medium hover:bg-slate-200 dark:hover:bg-slate-600 transition-colors"
+                >
+                  View History
+                </button>
+                <button
+                  onClick={() => router.push('/profile')}
+                  className="w-full px-4 py-2 bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-300 rounded-lg font-medium hover:bg-slate-200 dark:hover:bg-slate-600 transition-colors"
+                >
+                  Update Profile
+                </button>
+              </div>
             </div>
 
             {/* Development Testing (remove in production) */}
             {process.env.NODE_ENV === 'development' && (
               <div className="bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-xl p-4">
-                <h4 className="text-sm font-semibold mb-2">🧪 Testing Tools</h4>
+                <h4 className="font-medium text-yellow-800 dark:text-yellow-200 mb-2">Dev Testing</h4>
                 <div className="space-y-2">
                   <button
                     onClick={handleTestStreak}
-                    className="w-full px-3 py-1 bg-yellow-100 dark:bg-yellow-900/30 text-yellow-800 dark:text-yellow-200 rounded text-xs hover:bg-yellow-200 dark:hover:bg-yellow-900/50 transition-colors"
+                    className="w-full px-3 py-1 bg-yellow-600 text-white rounded text-sm hover:bg-yellow-700 transition-colors"
                   >
-                    Test Streak Badge
+                    Test Streak
                   </button>
                   <button
                     onClick={handleTestWorkouts}
-                    className="w-full px-3 py-1 bg-yellow-100 dark:bg-yellow-900/30 text-yellow-800 dark:text-yellow-200 rounded text-xs hover:bg-yellow-200 dark:hover:bg-yellow-900/50 transition-colors"
+                    className="w-full px-3 py-1 bg-yellow-600 text-white rounded text-sm hover:bg-yellow-700 transition-colors"
                   >
-                    Test Workout Badge
+                    Test Workouts
                   </button>
                 </div>
               </div>
@@ -317,62 +339,22 @@ export default function DashboardPage() {
         </div>
       </div>
 
-      {/* Badge celebration modal */}
+      {/* Badge Celebration Modal */}
       <BadgeCelebrationModal
-        badge={currentBadge}
         isOpen={showBadgeModal}
-        onClose={() => {
-          dismissBadgeModal()
-          clearNewBadges()
-        }}
+        badge={currentBadge}
+        onClose={dismissBadgeModal}
       />
 
-      {/* Confetti animation */}
+      {/* Confetti Effect */}
       {showConfetti && (
-        <div className="fixed inset-0 pointer-events-none z-40">
-          {/* Simple CSS-based confetti animation */}
+        <div className="fixed inset-0 pointer-events-none z-50">
+          <div className="absolute inset-0 bg-gradient-to-r from-green-400/20 to-blue-400/20 animate-pulse"></div>
           <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2">
-            <div className="animate-ping text-4xl">🎉</div>
+            <div className="text-6xl animate-bounce">🎉</div>
           </div>
         </div>
       )}
     </div>
   )
-}
-
-/*
-Dashboard Integration Notes:
-
-1. GAMIFICATION INTEGRATION:
-   - Badge display shows progress and achievements
-   - New badge notifications with celebration modal
-   - Testing tools for milestone verification
-   - Streak tracking and visual feedback
-
-2. NOTIFICATION SYSTEM:
-   - Browser notification permission request
-   - Daily reminder time customization
-   - Toggle for enabling/disabling reminders
-   - Visual feedback for notification status
-
-3. MOTIVATION MECHANICS:
-   - Immediate badge feedback after workout completion
-   - Progress visualization through stats cards
-   - Visual celebrations with confetti effects
-   - Clear progress indicators and next steps
-
-4. USER EXPERIENCE:
-   - Clean dashboard layout with sidebar for gamification
-   - Responsive design for mobile and desktop
-   - Smooth animations and transitions
-   - Development testing tools for badge verification
-
-5. HABIT FORMATION:
-   - Daily workout call-to-action
-   - Streak visualization as primary motivator
-   - Badge collection encourages consistency
-   - Notification reminders maintain engagement
-
-This dashboard creates a motivating daily experience that encourages
-habit formation through visual progress, achievements, and reminders.
-*/ 
+} 
